@@ -9,11 +9,11 @@
 int main()
 {
     auto vect = std::array<int, 10>();
+    auto n = nilmu::nilmu(vect, "Done.");
 
-    auto str = "truc";
-    auto n = nilmu::nilmu(vect, str);
+    nilmu::nil_options.frequency<10>();
 
-    const auto x = 2;
+    const auto x = 20;
     for (auto itr = n.begin(), end = n.end(); itr != end; ++itr) {
         std::this_thread::sleep_for(std::chrono::milliseconds(x));
         for (auto itr2 = n.begin(); itr2 != n.end(); ++itr2) {
