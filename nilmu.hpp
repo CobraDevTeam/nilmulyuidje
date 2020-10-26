@@ -4,11 +4,11 @@
 #include <iterator>
 #include <string>
 #include <chrono>
+#include <memory>
+#include <cassert>
+#include <cmath>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <cmath>
-
-
 
 namespace nilmu
 {
@@ -31,7 +31,10 @@ short nb_digits(uint32_t x)
 short nb_digits(uint64_t x)
 {
     short digit_count = 0;
-    while (x > (((uint64_t) 1) << 32)-1){
+
+    uint64_t max_int(1);
+    max_int <<= 32;
+    while (x > max_int-1){
         x /= 10;
         digit_count++;
     }
@@ -41,16 +44,16 @@ short nb_digits(uint64_t x)
 struct NilmuOptions
 {
     using DurationType = std::chrono::microseconds;
-    size_t      depth = 0;
-    size_t      max_depth = 0;
+    short      depth = 0;
+    short      max_depth = 0;
+    uint32_t term_width = set_term_width(80);
+    DurationType threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, 10>>(1));
     const char  spacer = ' ';
     const char  arrow_head = '>';
     const char  arrow_shaft = '=';
     const char  bracket_open = '[';
     const char  bracket_close = ']';
     const std::string backline = "\033[A";
-    const size_t term_width = set_term_width(80);
-    DurationType threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, 10>>(1));
 
     template <std::intmax_t Hertz>
     NilmuOptions& frequency()
@@ -78,28 +81,24 @@ class IteratorWrapper
 
         explicit IteratorWrapper(Iterator iter, int64_t total, const std::string& finisher)
             : _iter(iter)
-            , _current(0)
-            , _total(total)
-            , _total_nb_digits(nb_digits((size_t) total))
-            , _bar_offset(_total_nb_digits*2 + 4)
+            , _udata_ptr(std::make_unique<DataImpl>(total, finisher))
+            , _total_nb_digits(nb_digits(static_cast<size_t>(total)))
             // 4 = bracket size open and close + arrow size + bar between _current and _total
             // TODO change the offset with the theme
-            , _finisher(finisher)
-            , _last(Clock::now())
+            , _bar_offset(_total_nb_digits*2 + 4)
         {
             if(nil_options.depth++)
                 std::cout << "\n";
             nil_options.max_depth = nil_options.depth;
             body();
-            _current++;
+            _udata_ptr->_current++;
         }
 
         explicit IteratorWrapper(Iterator iter)
             : _iter(iter)
-            , _current(0)
-            , _total(-1)
-            , _total_nb_digits(-1)
-            , _bar_offset(-1)
+            , _udata_ptr(nullptr)
+            , _total_nb_digits(0)
+            , _bar_offset(0)
         {}
 
         bool operator==(const IteratorWrapper& other)
@@ -124,6 +123,7 @@ class IteratorWrapper
 
         IteratorWrapper& operator++()
         {
+            assert(_udata_ptr);
             write();
             ++_iter;
 
@@ -132,6 +132,7 @@ class IteratorWrapper
 
         IteratorWrapper& operator++(int)
         {
+            assert(_udata_ptr);
             IteratorWrapper ret = *this;
             ++(*this);
             return ret;
@@ -140,59 +141,77 @@ class IteratorWrapper
     private:
         inline bool has_waited_enough()
         {
+            auto& _last = _udata_ptr->_last;
+
             auto now = Clock::now();
-            _elapsed += std::chrono::duration_cast<decltype(_elapsed)>(now-_last);
-            _last = now;
-            bool waited_enough = (_elapsed > nil_options.threshold);
+            _udata_ptr->_elapsed += std::chrono::duration_cast<decltype(_udata_ptr->_elapsed)>(now-_last);
+            _udata_ptr->_last = now;
+            bool waited_enough = (_udata_ptr->_elapsed > nil_options.threshold);
             if(waited_enough)
-                _elapsed -= nil_options.threshold;
+                _udata_ptr->_elapsed -= nil_options.threshold;
             return waited_enough;
         }
 
         inline void write()
         {
-            if (has_waited_enough() || _current == _total)
+            if (has_waited_enough() || _udata_ptr->_current == _udata_ptr->_total)
                 body();
 
-            if (_current++ == _total)
+            if (_udata_ptr->_current++ == _udata_ptr->_total)
                 conclude(--nil_options.depth);
         }
 
         inline void body() const
         {
-            std::cout << "\r[";
-            short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
+            auto _current = _udata_ptr->_current;
+            auto _total = _udata_ptr->_total;
 
-            int i = 0;
-            int current_step = (static_cast<float>(_current) / static_cast<float>(_total))
-                * (nil_options.term_width - _bar_offset);
+            short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
+            int32_t current_step = (static_cast<float>(_current) / static_cast<float>(_total))
+                                * (nil_options.term_width - _bar_offset);
+
+            std::cout << "\r[";
+
+            int32_t i = 0;
             for (int e=current_step; i < e; ++i)
                 std::cout << nil_options.arrow_shaft;
             std::cout << nil_options.arrow_head ;
             for (; i < nil_options.term_width-_bar_offset+spacer_offset; ++i)
                 std::cout << nil_options.spacer;
 
-            std::cout << _current << "/" << _total << "] " << std::flush;
+            std::cout << _udata_ptr->_current << "/" << _udata_ptr->_total << "] " << std::flush;
         }
 
         inline void conclude(size_t depth) const
         {
             if(!depth) {
                 std::cout << std::string(nil_options.max_depth, '\n');
-                std::cout << _finisher << std::endl;
+                std::cout << _udata_ptr->_finisher << std::endl;
             }
             else
                 std::cout << nil_options.backline;
         }
 
-        Iterator                       _iter;
-        int64_t                        _current;
-        const int64_t                  _total;
-        const short                    _total_nb_digits;
-        const short                    _bar_offset;
-        const std::string              _finisher;
-        std::chrono::time_point<Clock> _last;
-        typename NilmuOptions::DurationType _elapsed;
+    private:
+        struct DataImpl {
+            DataImpl(size_t total, const std::string& finisher)
+                : _current(0)
+                , _total(total)
+                , _finisher(finisher)
+                , _last(Clock::now())
+            {}
+            const size_t                  _total;
+            size_t                        _current;
+            const std::string              _finisher;
+            std::chrono::time_point<Clock> _last;
+            typename NilmuOptions::DurationType _elapsed;
+            typename NilmuOptions::DurationType _threshold;
+        };
+
+        Iterator                  _iter;
+        std::unique_ptr<DataImpl> _udata_ptr;
+        const short               _total_nb_digits;
+        const short               _bar_offset;
 };
 
 template <typename InputIt>

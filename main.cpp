@@ -12,6 +12,7 @@ int main()
     auto n = nilmu::nilmu(vect, "Done.");
 
     nilmu::nil_options.frequency<10>();
+    nilmu::nil_options.term_width=80;
 
     const auto x = 20;
     for (auto itr = n.begin(), end = n.end(); itr != end; ++itr) {
