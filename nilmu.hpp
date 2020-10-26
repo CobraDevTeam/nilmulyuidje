@@ -4,9 +4,39 @@
 #include <iterator>
 #include <string>
 #include <chrono>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <cmath>
+
+
 
 namespace nilmu
 {
+
+short nb_digits(uint32_t x)
+{
+    return (x < 10 ? 1 :
+           (x < 100 ? 2 :
+           (x < 1000 ? 3 :
+           (x < 10000 ? 4 :
+           (x < 100000 ? 5 :
+           (x < 1000000 ? 6 :
+           (x < 10000000 ? 7 :
+           (x < 100000000 ? 8 :
+           (x < 1000000000 ? 9 :
+            10)))))))));
+}
+
+// TODO Test on this function on edge cases
+short nb_digits(uint64_t x)
+{
+    short digit_count = 0;
+    while (x > (((uint64_t) 1) << 32)-1){
+        x /= 10;
+        digit_count++;
+    }
+    return digit_count + nb_digits(static_cast<uint32_t>(x));
+}
 
 struct NilmuOptions
 {
@@ -19,6 +49,7 @@ struct NilmuOptions
     const char  bracket_open = '[';
     const char  bracket_close = ']';
     const std::string backline = "\033[A";
+    const size_t term_width = set_term_width(80);
     DurationType threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, 10>>(1));
 
     template <std::intmax_t Hertz>
@@ -26,6 +57,11 @@ struct NilmuOptions
     {
         threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, Hertz>>(1));
         return *this;
+    }
+    static size_t set_term_width(size_t width){
+        struct winsize w;
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+        return std::min<size_t>(width, w.ws_col);
     }
 
 } nil_options;
@@ -44,6 +80,10 @@ class IteratorWrapper
             : _iter(iter)
             , _current(0)
             , _total(total)
+            , _total_nb_digits(nb_digits((size_t) total))
+            , _bar_offset(_total_nb_digits*2 + 4)
+            // 4 = bracket size open and close + arrow size + bar between _current and _total
+            // TODO change the offset with the theme
             , _finisher(finisher)
             , _last(Clock::now())
         {
@@ -58,6 +98,8 @@ class IteratorWrapper
             : _iter(iter)
             , _current(0)
             , _total(-1)
+            , _total_nb_digits(-1)
+            , _bar_offset(-1)
         {}
 
         bool operator==(const IteratorWrapper& other)
@@ -119,11 +161,15 @@ class IteratorWrapper
         inline void body() const
         {
             std::cout << "\r[";
+            short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
+
             int i = 0;
-            for (int e=_current; i < e; ++i)
+            int current_step = (static_cast<float>(_current) / static_cast<float>(_total))
+                * (nil_options.term_width - _bar_offset);
+            for (int e=current_step; i < e; ++i)
                 std::cout << nil_options.arrow_shaft;
             std::cout << nil_options.arrow_head ;
-            for (; i < _total; ++i)
+            for (; i < nil_options.term_width-_bar_offset+spacer_offset; ++i)
                 std::cout << nil_options.spacer;
 
             std::cout << _current << "/" << _total << "] " << std::flush;
@@ -142,6 +188,8 @@ class IteratorWrapper
         Iterator                       _iter;
         int64_t                        _current;
         const int64_t                  _total;
+        const short                    _total_nb_digits;
+        const short                    _bar_offset;
         const std::string              _finisher;
         std::chrono::time_point<Clock> _last;
         typename NilmuOptions::DurationType _elapsed;
