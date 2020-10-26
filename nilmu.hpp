@@ -145,7 +145,6 @@ class IteratorWrapper
         const std::string              _finisher;
         std::chrono::time_point<Clock> _last;
         typename NilmuOptions::DurationType _elapsed;
-        typename NilmuOptions::DurationType _threshold;
 };
 
 template <typename InputIt>
