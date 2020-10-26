@@ -20,7 +20,7 @@ struct NilmuOptions
     using DurationType = std::chrono::microseconds;
     short      depth = 0;
     short      max_depth = 0;
-    uint32_t term_width = set_term_width(80);
+    uint32_t _term_width;
     DurationType threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, 10>>(1));
     const char  spacer = ' ';
     const char  arrow_head = '>';
@@ -35,10 +35,15 @@ struct NilmuOptions
         threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, Hertz>>(1));
         return *this;
     }
-    static size_t set_term_width(size_t width){
+    NilmuOptions& term_width(uint32_t width){
         struct winsize w;
         ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-        return std::min<size_t>(width, w.ws_col);
+        _term_width = std::min<size_t>(width, w.ws_col);
+        return *this;
+    }
+    uint32_t term_width() const
+    {
+        return _term_width;
     }
 
 } nil_options;
@@ -142,7 +147,7 @@ class IteratorWrapper
 
             short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
             int32_t current_step = (static_cast<float>(_current) / static_cast<float>(_total))
-                                * (nil_options.term_width - _bar_offset);
+                                * (nil_options.term_width() - _bar_offset);
 
             std::cout << "\r[";
 
@@ -150,7 +155,7 @@ class IteratorWrapper
             for (int e=current_step; i < e; ++i)
                 std::cout << nil_options.arrow_shaft;
             std::cout << nil_options.arrow_head ;
-            for (; i < nil_options.term_width-_bar_offset+spacer_offset; ++i)
+            for (; i < nil_options.term_width()-_bar_offset+spacer_offset; ++i)
                 std::cout << nil_options.spacer;
 
             std::cout << _udata_ptr->_current << "/" << _udata_ptr->_total << "] " << std::flush;
