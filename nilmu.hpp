@@ -112,7 +112,7 @@ class IteratorWrapper
         IteratorWrapper& operator++(int)
         {
             assert(_udata_ptr);
-            IteratorWrapper ret = *this;
+            IteratorWrapper& ret = *this;
             ++(*this);
             return ret;
         }
