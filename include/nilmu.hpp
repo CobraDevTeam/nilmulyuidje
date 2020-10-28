@@ -5,7 +5,6 @@
 namespace nilmu
 {
 
-
 template <typename InputIt>
 class NilmuIter
 {

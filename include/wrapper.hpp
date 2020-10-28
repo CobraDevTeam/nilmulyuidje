@@ -19,30 +19,11 @@ class IteratorWrapper
 {
     public:
         using Base = std::iterator<std::forward_iterator_tag,
-             typename std::iterator_traits<Iterator>::value_type>;
+                                   typename std::iterator_traits<Iterator>::value_type>;
         using Clock = std::chrono::high_resolution_clock;
 
-        explicit IteratorWrapper(Iterator iter, int64_t total, const std::string& finisher)
-            : _iter(iter)
-            , _udata_ptr(std::make_unique<DataImpl>(total, finisher))
-            , _total_nb_digits(nb_digits(static_cast<size_t>(total)))
-            // 4 = bracket size open and close + arrow size + bar between _current and _total
-            // TODO change the offset with the theme
-            , _bar_offset(_total_nb_digits*2 + 4)
-        {
-            if(nil_options.depth++)
-                std::cout << "\n";
-            nil_options.max_depth = nil_options.depth;
-            body();
-            _udata_ptr->_current++;
-        }
-
-        explicit IteratorWrapper(Iterator iter)
-            : _iter(iter)
-            , _udata_ptr(nullptr)
-            , _total_nb_digits(0)
-            , _bar_offset(0)
-        {}
+        explicit IteratorWrapper(Iterator iter, int64_t total, const std::string& finisher);
+        explicit IteratorWrapper(Iterator iter);
 
         bool operator==(const IteratorWrapper& other)
         {
@@ -64,76 +45,20 @@ class IteratorWrapper
             return _iter.operator->();
         }
 
-        IteratorWrapper& operator++()
-        {
-            assert(_udata_ptr);
-            write();
-            ++_iter;
+        // Prefix increment operator
+        IteratorWrapper& operator++();
 
-            return *this;
-        }
-
-        IteratorWrapper& operator++(int)
-        {
-            assert(_udata_ptr);
-            IteratorWrapper& ret = *this;
-            ++(*this);
-            return ret;
-        }
+        // Postfix increment operator
+        IteratorWrapper& operator++(int);
 
     private:
-        inline bool has_waited_enough()
-        {
-            auto& _last = _udata_ptr->_last;
+        inline bool has_waited_enough();
 
-            auto now = Clock::now();
-            _udata_ptr->_elapsed += std::chrono::duration_cast<decltype(_udata_ptr->_elapsed)>(now-_last);
-            _udata_ptr->_last = now;
-            bool waited_enough = (_udata_ptr->_elapsed > nil_options.threshold);
-            if(waited_enough)
-                _udata_ptr->_elapsed -= nil_options.threshold;
-            return waited_enough;
-        }
+        inline void write();
 
-        inline void write()
-        {
-            if (has_waited_enough() || _udata_ptr->_current == _udata_ptr->_total)
-                body();
+        inline void body() const;
 
-            if (_udata_ptr->_current++ == _udata_ptr->_total)
-                conclude(--nil_options.depth);
-        }
-
-        inline void body() const
-        {
-            auto _current = _udata_ptr->_current;
-            auto _total = _udata_ptr->_total;
-
-            short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
-            int32_t current_step = (static_cast<float>(_current) / static_cast<float>(_total))
-                                * (nil_options.term_width() - _bar_offset);
-
-            std::cout << "\r[";
-
-            int32_t i = 0;
-            for (int e=current_step; i < e; ++i)
-                std::cout << nil_options.arrow_shaft;
-            std::cout << nil_options.arrow_head ;
-            for (; i < nil_options.term_width()-_bar_offset+spacer_offset; ++i)
-                std::cout << nil_options.spacer;
-
-            std::cout << _udata_ptr->_current << "/" << _udata_ptr->_total << "] " << std::flush;
-        }
-
-        inline void conclude(size_t depth) const
-        {
-            if(!depth) {
-                std::cout << std::string(nil_options.max_depth, '\n');
-                std::cout << _udata_ptr->_finisher << std::endl;
-            }
-            else
-                std::cout << nil_options.backline;
-        }
+        inline void conclude(size_t depth) const;
 
     private:
         struct DataImpl {
@@ -143,10 +68,10 @@ class IteratorWrapper
                 , _finisher(finisher)
                 , _last(Clock::now())
             {}
-            const size_t                  _total;
-            size_t                        _current;
-            const std::string              _finisher;
-            std::chrono::time_point<Clock> _last;
+            const size_t                        _total;
+            size_t                              _current;
+            const std::string                   _finisher;
+            std::chrono::time_point<Clock>      _last;
             typename NilmuOptions::DurationType _elapsed;
             typename NilmuOptions::DurationType _threshold;
         };
@@ -156,6 +81,112 @@ class IteratorWrapper
         const short               _total_nb_digits;
         const short               _bar_offset;
 };
+
+/***************************** CONSTRUCTORS *********************************/
+
+template <typename Iterator>
+IteratorWrapper<Iterator>::IteratorWrapper(Iterator iter, int64_t total, const std::string& finisher)
+    : _iter(iter)
+    , _udata_ptr(std::make_unique<DataImpl>(total, finisher))
+    , _total_nb_digits(nb_digits(static_cast<size_t>(total)))
+    // 4 = bracket size open and close + arrow size + bar between _current and _total
+    // TODO change the offset with the theme
+    , _bar_offset(_total_nb_digits*2 + 4)
+{
+    if(nil_options.depth++)
+        std::cout << "\n";
+    nil_options.max_depth = nil_options.depth;
+    body();
+    _udata_ptr->_current++;
+}
+
+template <typename Iterator>
+IteratorWrapper<Iterator>::IteratorWrapper(Iterator iter)
+    : _iter(iter)
+    , _udata_ptr(nullptr)
+    , _total_nb_digits(0)
+    , _bar_offset(0)
+{}
+
+/***************************** OPERATORS  ***********************************/
+
+template <typename Iterator>
+IteratorWrapper<Iterator>& IteratorWrapper<Iterator>::operator++()
+{
+    assert(_udata_ptr);
+    write();
+    ++_iter;
+
+    return *this;
+}
+
+template <typename Iterator>
+IteratorWrapper<Iterator>& IteratorWrapper<Iterator>::operator++(int)
+{
+    assert(_udata_ptr);
+    IteratorWrapper& ret = *this;
+    ++(*this);
+    return ret;
+}
+
+/***************************** DISPLAY FUNCTIONS ****************************/
+
+template <typename Iterator>
+bool IteratorWrapper<Iterator>::has_waited_enough()
+{
+    auto& _last = _udata_ptr->_last;
+
+    auto now = Clock::now();
+    _udata_ptr->_elapsed += std::chrono::duration_cast<decltype(_udata_ptr->_elapsed)>(now-_last);
+    _udata_ptr->_last = now;
+    bool waited_enough = (_udata_ptr->_elapsed > nil_options.threshold);
+    if(waited_enough)
+        _udata_ptr->_elapsed -= nil_options.threshold;
+    return waited_enough;
+}
+
+template <typename Iterator>
+void IteratorWrapper<Iterator>::write()
+{
+    if (has_waited_enough() || _udata_ptr->_current == _udata_ptr->_total)
+        body();
+
+    if (_udata_ptr->_current++ == _udata_ptr->_total)
+        conclude(--nil_options.depth);
+}
+
+template <typename Iterator>
+void IteratorWrapper<Iterator>::body() const
+{
+    auto _current = _udata_ptr->_current;
+    auto _total = _udata_ptr->_total;
+
+    short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
+    int32_t current_step = (static_cast<float>(_current) / static_cast<float>(_total))
+                        * (nil_options.term_width() - _bar_offset);
+
+    std::cout << "\r[";
+
+    int32_t i = 0;
+    for (int e=current_step; i < e; ++i)
+        std::cout << nil_options.arrow_shaft;
+    std::cout << nil_options.arrow_head ;
+    for (; i < nil_options.term_width()-_bar_offset+spacer_offset; ++i)
+        std::cout << nil_options.spacer;
+
+    std::cout << _udata_ptr->_current << "/" << _udata_ptr->_total << "] " << std::flush;
+}
+
+template <typename Iterator>
+void IteratorWrapper<Iterator>::conclude(size_t depth) const
+{
+    if(!depth) {
+        std::cout << std::string(nil_options.max_depth, '\n');
+        std::cout << _udata_ptr->_finisher << std::endl;
+    }
+    else
+        std::cout << nil_options.backline;
+}
 
 }
 // namespace nilmu
