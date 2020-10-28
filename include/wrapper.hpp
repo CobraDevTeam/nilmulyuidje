@@ -161,18 +161,15 @@ void IteratorWrapper<Iterator>::body() const
     auto _current = _udata_ptr->_current;
     auto _total = _udata_ptr->_total;
 
-    short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
-    int32_t current_step = (static_cast<float>(_current) / static_cast<float>(_total))
+    const short spacer_offset = _total_nb_digits - nb_digits(static_cast<size_t>(_current));
+    const int32_t current_step = (static_cast<float>(_current) / static_cast<float>(_total))
                         * (nil_options.term_width() - _bar_offset);
 
     std::cout << "\r[";
 
-    int32_t i = 0;
-    for (int e=current_step; i < e; ++i)
-        std::cout << nil_options.arrow_shaft;
-    std::cout << nil_options.arrow_head ;
-    for (; i < nil_options.term_width()-_bar_offset+spacer_offset; ++i)
-        std::cout << nil_options.spacer;
+    nil_options.theme().write(std::cout,
+                              current_step,
+                              nil_options.term_width()-_bar_offset+spacer_offset);
 
     std::cout << _udata_ptr->_current << "/" << _udata_ptr->_total << "] " << std::flush;
 }
