@@ -20,7 +20,7 @@ struct NilmuOptions
     using DurationType = std::chrono::microseconds;
     short      depth = 0;
     short      max_depth = 0;
-    uint32_t _term_width;
+    uint32_t _term_width = 80;
     DurationType threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, 10>>(1));
     const char  spacer = ' ';
     const char  arrow_head = '>';
@@ -112,7 +112,7 @@ class IteratorWrapper
         IteratorWrapper& operator++(int)
         {
             assert(_udata_ptr);
-            IteratorWrapper ret = *this;
+            IteratorWrapper& ret = *this;
             ++(*this);
             return ret;
         }
