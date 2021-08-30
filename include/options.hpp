@@ -39,7 +39,7 @@ struct NilmuOptions
 NilmuOptions::NilmuOptions()
 {
     term_width(80);
-    theme(new AsciiTheme);
+    theme(new RollTheme);
 }
 
 template <std::intmax_t Hertz>

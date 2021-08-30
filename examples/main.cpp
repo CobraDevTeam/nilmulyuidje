@@ -8,11 +8,12 @@
 
 int main()
 {
-    auto vect = std::array<int, 1000>();
+    auto vect = std::array<int, 100>();
     auto n = nilmu::nilmu(vect, "Done.");
 
-    nilmu::nil_options.frequency<10>()
+    nilmu::nil_options.frequency<30>()
                       .term_width(80);
+                      //.theme(new RollTheme);
 
     const auto x = 2;
     for (auto itr = n.begin(), end = n.end(); itr != end; ++itr) {
