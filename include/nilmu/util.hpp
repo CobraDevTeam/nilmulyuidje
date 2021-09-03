@@ -5,6 +5,9 @@
 namespace nilmu
 {
 
+/**
+ * Extremely efficient function to count the number of digits of an int32
+ */
 short nb_digits(uint32_t x)
 {
     return (x < 10 ? 1 :
@@ -19,13 +22,16 @@ short nb_digits(uint32_t x)
             10)))))))));
 }
 
-// TODO Test on this function on edge cases
+/**
+ * Functions which counts the number of digits of an int64
+ * TODO Test on this function on edge cases
+ */
 short nb_digits(uint64_t x)
 {
     short digit_count = 0;
 
-    uint64_t max_int(1);
-    max_int <<= 32;
+    // 2^32
+    uint64_t max_int = 1Ul << 32;
     while (x > max_int-1){
         x /= 10;
         digit_count++;

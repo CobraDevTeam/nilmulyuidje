@@ -7,6 +7,7 @@ struct BaseTheme
     virtual std::ostream& write(std::ostream& stream, size_t finished, size_t remaining) const =0;
 };
 
+// Improve with CRTP ?
 struct AsciiTheme : public BaseTheme
 {
     std::ostream& write(std::ostream& stream, size_t finished, size_t remaining) const final override

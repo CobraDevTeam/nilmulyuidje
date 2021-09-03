@@ -1,4 +1,5 @@
-#include "include/nilmu.hpp"
+#include "nilmu/nilmu.hpp"
+#include "nilmu/theme.hpp"
 
 #include <vector>
 #include <array>
@@ -8,26 +9,36 @@
 
 int main()
 {
-    auto vect = std::array<int, 100>();
-    auto n = nilmu::nilmu(vect, "Done.");
 
+    // Nilmu options struct : fps & terminal width
     nilmu::nil_options.frequency<30>()
-                      .term_width(80);
-                      //.theme(new RollTheme);
+                      .term_width(80)
+                      .theme(new AsciiTheme());
 
-    const auto x = 2;
+    // Amount of time to sleep at each loop iteration
+    const auto sleep_time = std::chrono::milliseconds(2);
+    auto sleep_time_f = [] (int x) {return std::chrono::milliseconds(x);};
+
+    // Iterator-based nilmu wrapper
+    auto arr = std::array<int, 15>();
+    auto n = nilmu::nilmu(arr, "Done.");
     for (auto itr = n.begin(), end = n.end(); itr != end; ++itr) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(x));
         for (auto itr2 = n.begin(); itr2 != n.end(); ++itr2) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(x));
             for (auto itr2 = n.begin(); itr2 != n.end(); ++itr2) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(x));
+                std::this_thread::sleep_for(sleep_time);
             }
         }
     }
-    for (auto itr2 = n.begin(); itr2 != n.end(); ++itr2) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(x));
+
+    // Range-based loop nilmu wrapper
+    for (auto x : nilmu::nilmu(std::vector<int>(100, 2), "Finished")) {
+        std::this_thread::sleep_for(sleep_time_f(x));;
     }
+
+    auto truc = std::vector<int>(100);
+    auto nn = nilmu::nilmu(truc.begin(), truc.end(), "The end");
+    for (auto x : nn)
+        std::this_thread::sleep_for(sleep_time_f(x));;
 
     return 0;
 }
