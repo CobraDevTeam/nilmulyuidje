@@ -1,4 +1,5 @@
-#include "include/nilmu.hpp"
+#include "nilmu/nilmu.hpp"
+
 #include <vector>
 #include <array>
 #include <chrono>
@@ -8,9 +9,9 @@
 
 
 static void BM_nilmu(benchmark::State& state) {
-    int n = 10000;
+    int n = 1000;
     auto vec = std::vector<int>(n);
-    auto nil = nilmu::nilmu(vec, "Done !");
+    auto nil = nilmu::nilmu(vec, "");
     nilmu::nil_options.frequency<10>()
                       .term_width(80);
     for (auto _ : state) {
@@ -19,7 +20,7 @@ static void BM_nilmu(benchmark::State& state) {
 }
 
 static void BM_classic(benchmark::State& state) {
-    int n = 10000;
+    int n = 1000;
     auto vec = std::vector<int>(n);
     for (auto _ : state) {
         for (auto itr(vec.begin()), end = vec.end(); itr != end; itr++){}
