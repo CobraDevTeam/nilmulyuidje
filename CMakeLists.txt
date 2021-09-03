@@ -14,6 +14,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 #======================================================================
 
+add_compile_options(-O3)
+
 # Recurse to subdirectories
 add_subdirectory(bench)
 add_subdirectory(examples)

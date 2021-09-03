@@ -9,7 +9,7 @@
 
 
 static void BM_nilmu(benchmark::State& state) {
-    int n = 1000;
+    int n = 100000;
     auto vec = std::vector<int>(n);
     auto nil = nilmu::nilmu(vec, "");
     nilmu::nil_options.frequency<10>()
@@ -20,7 +20,7 @@ static void BM_nilmu(benchmark::State& state) {
 }
 
 static void BM_classic(benchmark::State& state) {
-    int n = 1000;
+    int n = 100000;
     auto vec = std::vector<int>(n);
     for (auto _ : state) {
         for (auto itr(vec.begin()), end = vec.end(); itr != end; itr++){}
