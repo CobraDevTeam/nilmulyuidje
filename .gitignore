@@ -3,6 +3,7 @@
 
 # build folder
 build
+compile_commands.json
 
 # Compiled Object files
 *.slo

@@ -29,7 +29,7 @@ struct NilmuOptions
     DurationType threshold = std::chrono::duration_cast<DurationType>(std::chrono::duration<long, std::ratio<1, 10>>(1));
     //
     const std::string backline = "\033[A";
-    std::unique_ptr<BaseTheme> _theme;
+    std::unique_ptr<AbstractTheme> _theme;
 
     /**
      * Default constructor. Sets terminal width to 80 and theme to RollTheme
@@ -56,11 +56,14 @@ struct NilmuOptions
      * Changes the theme
      * @param theme pointer to the theme struct to use
      */
-    NilmuOptions& theme(BaseTheme* theme);
+    template <typename Derived>
+    NilmuOptions& theme(BaseTheme<Derived>* theme);
+
     /**
      * Returns a reference to the currently used theme
      */
-    const BaseTheme& theme() const;
+    const AbstractTheme& theme() const;
+
 } nil_options;
 
 NilmuOptions::NilmuOptions()
@@ -92,13 +95,14 @@ uint32_t NilmuOptions::term_width() const
     return _term_width;
 }
 
-NilmuOptions& NilmuOptions::theme(BaseTheme* theme)
+template <typename Derived>
+NilmuOptions& NilmuOptions::theme(BaseTheme<Derived>* theme)
 {
     _theme.reset(theme);
     return *this;
 }
 
-const BaseTheme& NilmuOptions::theme() const
+const AbstractTheme& NilmuOptions::theme() const
 {
    return *_theme;
 }

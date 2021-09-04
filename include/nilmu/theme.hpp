@@ -2,13 +2,21 @@
 
 #include<ostream>
 
-struct BaseTheme
-{
-    virtual std::ostream& write(std::ostream& stream, size_t finished, size_t remaining) const =0;
+struct AbstractTheme {
+    virtual std::ostream& write(std::ostream& stream, size_t finished, size_t remaining) const = 0;
 };
 
-// Improve with CRTP ?
-struct AsciiTheme : public BaseTheme
+template <typename Derived>
+struct BaseTheme : AbstractTheme
+{
+    virtual std::ostream& write(std::ostream& stream, size_t finished, size_t remaining) const override
+    {
+        return static_cast<const Derived*>(this)->write(stream, finished, remaining);
+    }
+};
+
+
+struct AsciiTheme : public BaseTheme<AsciiTheme>
 {
     std::ostream& write(std::ostream& stream, size_t finished, size_t remaining) const final override
     {
@@ -24,7 +32,7 @@ struct AsciiTheme : public BaseTheme
     }
 };
 
-struct RollTheme : public BaseTheme
+struct RollTheme : public BaseTheme<AsciiTheme>
 {
     std::ostream& write(std::ostream& stream, size_t finished, size_t remaining) const final override
     {
