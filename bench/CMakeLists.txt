@@ -7,9 +7,6 @@ target_link_libraries(Benchmark
                       pthread
                       )
 
-#target_link_directories(Benchmark
-                        #PUBLIC
-                        #)
 target_include_directories(Benchmark
                            PUBLIC
                            "../include"
